@@ -26,3 +26,9 @@
 *.exe
 *.out
 *.app
+
+# Trigger:
+.cproject
+.project
+gen/
+out/
