@@ -5,7 +5,7 @@
 // Description : Example Application of COS Project
 //============================================================================
 #define DEBUG_LEVEL 0
-#define LOG_TAG "NfcTECHSample"
+#define LOG_TAG "Trigger"
 
 #include <gaia/base/Array.h>
 #include <gaia/base/ByteArray.h>
@@ -97,6 +97,9 @@ using gaia::connectivity::MifareClassic;
     mpScrollView(NULL),
     mpNfcAdapter(NULL),
     mNfcEnabled(false),
+    mWriteTag(false),
+    mpWrite_btn(NULL),
+    mpNfcTECHBtnOnClickListener(NULL),
     mpContext(NULL) {
 }
 
@@ -125,6 +128,14 @@ void NfcTECH::onInit(Persistence* const p) {
     mpTextWarning->setText("Warning: ");
     mpCtrl->addWidget(mpTextWarning);
 
+    mpNfcTECHBtnOnClickListener = new NfcTECHBtnOnClickListener(this);
+    mpWrite_btn = new Button(this);
+    mpWrite_btn->setText("(点击)写入");
+    mpWrite_btn->setId(NfcTECH::Write_button);
+    mpWrite_btn->setOnClickListener(mpNfcTECHBtnOnClickListener);
+    mpCtrl->addWidget(mpWrite_btn);
+
+
     mpNfcAdapter = NfcAdapter::getDefaultAdapterN(*mpContext);
     mNfcEnabled = getEnablerState();
     if (mNfcEnabled) {
@@ -134,9 +145,14 @@ void NfcTECH::onInit(Persistence* const p) {
     	showMessage("NFC is not enabled!");
     	goto init_error;
     }
-
+    GLOG(LOG_TAG, LOGINFO, "%s:%d ", __FUNCTION__, __LINE__);
     pScene->attachController(mpCtrl);
     pScene->setupSceneLayout();
+
+	//const Demand demand(getDemand());
+    ///GLOG(LOG_TAG, LOGINFO, "%s:%d, onNewDemand demand = %s", __FUNCTION__, __LINE__, demand.toString().string());
+    //showMessage(demand.toString().string());
+    //resolveDemand(demand);
     return;
 
  init_error:
@@ -146,6 +162,8 @@ void NfcTECH::onInit(Persistence* const p) {
 	safe_delete(mpTextWarning);
 	safe_delete(mpScrollView);
 	safe_delete(mpNfcAdapter);
+	safe_delete(mpWrite_btn);
+	safe_delete(mpNfcTECHBtnOnClickListener);
 }
 
 void NfcTECH::onTear() {
@@ -156,12 +174,24 @@ void NfcTECH::onTear() {
 		safe_delete(mpTextWarning);
 		safe_delete(mpScrollView);
 		safe_delete(mpNfcAdapter);
+		safe_delete(mpWrite_btn);
+		safe_delete(mpNfcTECHBtnOnClickListener);
 		getSceneSingleton()->SceneDestroy();
 	}
 	mNfcEnabled = false;
+	mWriteTag = false;
 }
 
 void NfcTECH::onResume() {
+	const Demand demand(getDemand());
+    GLOG(LOG_TAG, LOGINFO, "%s:%d, onNewDemand demand = %s", __FUNCTION__, __LINE__, demand.toString().string());
+    //showMessage(demand.toString().string());
+    showWarning(demand.toString().string());
+    resolveDemand(demand);
+
+}
+
+void NfcTECH::onRestart() {
 	const Demand demand(getDemand());
     GLOG(LOG_TAG, LOGINFO, "%s:%d, onNewDemand demand = %s", __FUNCTION__, __LINE__, demand.toString().string());
     showMessage(demand.toString().string());
@@ -200,16 +230,48 @@ void NfcTECH::resolveDemand(const Demand& demand) {
     //TODO
         Parcelable parcel = demand.getParcelableExtra(NfcAdapter::EXTRA_TAG());
         Tag* tag = parcel.getN<Tag>();
-        bool auth = false;
-        // Get an instance of the Mifare classic card from this TAG intent
-        MifareClassic* mfc = MifareClassic::getN(*tag);
-        String metaInfo = "";
-        //Enable I/O operations to the tag from this TagTechnology object.
-        mfc->connect();
-        int32_t type = mfc->getType();//获取TAG的类型
-        int32_t sectorCount = mfc->getSectorCount();//获取TAG中包含的扇区数
-        String typeS = "";
-        typeS = "MifareClassic";
+        if (mWriteTag) {
+        	GLOG(LOG_TAG, LOGINFO, "mWriteTag true");
+        	mWriteTag = false;
+        	bool auth = false;
+        	MifareClassic* mfc = MifareClassic::getN(*tag);
+        	String metaInfo = "";
+        	mfc->connect();
+        	String typeS = "MifareClassic";
+        	int32_t sector_index = 0;
+        	int32_t block_index = 0;
+        	auth = mfc->authenticateSectorWithKeyA(sector_index, MifareClassic::KEY_DEFAULT());
+        	if (auth) {
+        	    showWarning("authentic OK");
+        	    ByteArray data_write(16);
+        	    for (int i = 0; i < 16; i++) {
+        	      data_write[i] = i;
+        	     }
+        	     //void writeBlock(int32_t blockIndex, const gaia::base::ByteArray& data);
+        	     mfc->writeBlock(1, data_write);
+        	     showWarning(" write finished!");
+        	     GLOG(LOG_TAG, LOGINFO, " write finished!");
+        	     showMessage("");
+
+        	  }else {
+        	        		showWarning("authentic failed!");
+        	        		GLOG(LOG_TAG, LOGINFO, " authentic failed! in write");
+        	        	}
+
+
+        }else {
+        	GLOG(LOG_TAG, LOGINFO, "mWriteTag false");
+        	bool auth = false;
+        	// Get an instance of the Mifare classic card from this TAG intent
+        	MifareClassic* mfc = MifareClassic::getN(*tag);
+        	String metaInfo = "";
+        	//Enable I/O operations to the tag from this TagTechnology object.
+        	mfc->connect();
+        	int32_t type = mfc->getType();//获取TAG的类型
+        	int32_t sectorCount = mfc->getSectorCount();//获取TAG中包含的扇区数
+        	String typeS = "";
+        	typeS = "MifareClassic";
+
 /*  //TODO
         switch (type) {
             case MifareClassic.TYPE_CLASSIC:
@@ -226,10 +288,10 @@ void NfcTECH::resolveDemand(const Demand& demand) {
                 break;
         }
 */
-        metaInfo = metaInfo + "卡片类型：" + typeS + "\n共" + String::valueOf(sectorCount) + "个扇区\n共"
+        	metaInfo = metaInfo + "卡片类型：" + typeS + "\n共" + String::valueOf(sectorCount) + "个扇区\n共"
                     + String::valueOf(mfc->getBlockCount()) + "个块\n存储空间: " + String::valueOf(mfc->getSize()) + "B\n";
 
-        for (int32_t j = 0; j < sectorCount; j++) {
+        	for (int32_t j = 0; j < sectorCount; j++) {
                 //Authenticate a sector with key A.
                auth = mfc->authenticateSectorWithKeyA(j, MifareClassic::KEY_DEFAULT());
                 int32_t bCount;
@@ -254,6 +316,7 @@ void NfcTECH::resolveDemand(const Demand& demand) {
                 }
             }
             showMessage(metaInfo);
+        }
 
           }
 #if 0
@@ -288,9 +351,9 @@ void NfcTECH::onNewDemand(Demand* const demand) {
         // String action = demand->getAction();
         // GLOG(LOG_TAG, LOGINFO, "%s:%d, onNewDemand action = %s", __FUNCTION__, __LINE__, action.string());
 
-        GLOG(LOG_TAG, LOGINFO, "%s:%d, onNewDemand demand = %s", __FUNCTION__, __LINE__, demand->toString().string());
-        showMessage(demand->toString().string());
-        resolveDemand(*demand);
+        //GLOG(LOG_TAG, LOGINFO, "%s:%d, onNewDemand demand = %s", __FUNCTION__, __LINE__, demand->toString().string());
+        //showMessage(demand->toString().string());
+        //resolveDemand(*demand);
     }
 
 String NfcTECH::bytesToString(const ByteArray& bs) {
@@ -303,6 +366,32 @@ String NfcTECH::bytesToString(const ByteArray& bs) {
     }
     return s;
 }
+
+NfcTECHBtnOnClickListener::NfcTECHBtnOnClickListener(NfcTECH* pNfcTECH):mpNfcTECH(pNfcTECH) {
+    GLOGENTRY(LOG_TAG);
+}
+
+NfcTECHBtnOnClickListener::~NfcTECHBtnOnClickListener() {
+	mpNfcTECH = NULL;
+    GLOGENTRY(LOG_TAG);
+}
+
+void NfcTECHBtnOnClickListener::onClick(Widget* v){
+    GLOGENTRY(LOG_TAG);
+    switch(v->getId()) {
+    case NfcTECH::Write_button:
+    	mpNfcTECH->mWriteTag = true;
+    	mpNfcTECH->showWarning("Write TAG");
+    	GLOG(LOG_TAG, LOGINFO, "set mWriteTag true");
+            break;
+    default:
+            GLOG(LOG_TAG,LOGER,"unknown button");
+            break;
+    }
+
+}
+
+
 
 
 template class Export<NfcTECH, Page>;

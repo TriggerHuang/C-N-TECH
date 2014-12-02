@@ -15,6 +15,7 @@ namespace gaia {
         class NdefMessage;
         class NdefRecord;
         class CreateNdefMessageCallback;
+        class Tag;
     }  // connectivity
 
     namespace core {
@@ -55,9 +56,14 @@ namespace gaia {
     }
 }  // gaia
 
-
+class NfcTECHBtnOnClickListener;
 class NfcTECH: public gaia::core::Page {
   public:
+	 enum ButtonID {
+	           Write_button = 0,
+	           Read_button = 1,
+	 };
+
     NfcTECH();
     ~NfcTECH();
 
@@ -66,6 +72,7 @@ class NfcTECH: public gaia::core::Page {
     virtual void onTear();
     virtual void onNewDemand(gaia::core::Demand* const demand);
     virtual void onResume();
+    virtual void onRestart();
   public:
     void resolveDemand(const gaia::core::Demand& demand);
     bool getEnablerState();
@@ -74,14 +81,31 @@ class NfcTECH: public gaia::core::Page {
     gaia::base::String NfcTECH::bytesToString(const gaia::base::ByteArray& bs);
 
 
-  private:
+  //private:
+  public:
     gaia::ui::LinearController* mpCtrl;
 
     gaia::core::Context* mpContext;
     gaia::ui::TextWidget* mpTextNotice;
     gaia::ui::TextWidget* mpTextWarning;
     gaia::ui::ScrollWidget* mpScrollView;
+    gaia::ui::Button* mpWrite_btn;
     gaia::connectivity::NfcAdapter* mpNfcAdapter;
+    NfcTECHBtnOnClickListener* mpNfcTECHBtnOnClickListener;
+
+
     bool mNfcEnabled;
+    bool mWriteTag;
 };
+
+class NfcTECHBtnOnClickListener: public gaia::core::OnClickListener {
+        private:
+			NfcTECH* mpNfcTECH;
+        public:
+			NfcTECHBtnOnClickListener(NfcTECH* pNfcTECH);
+                virtual ~NfcTECHBtnOnClickListener();
+                void onClick(gaia::core::Widget* v);
+
+};
+
 
