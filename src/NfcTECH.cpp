@@ -1,8 +1,8 @@
 //============================================================================
 // Copyright [2013] <COS>
 // Name        : NfcTECH.cpp
-// Author      : TriggerHuang@viatech.com.cn
-// Description : Example Application of COS Project
+// Author      : TriggerHuang
+// Description : Example Application of NFC Project
 //============================================================================
 #define DEBUG_LEVEL 0
 #define LOG_TAG "Trigger"
