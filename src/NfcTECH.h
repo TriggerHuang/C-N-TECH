@@ -2,7 +2,7 @@
 // Copyright [2013] <COS>
 // Name        : NfcTECH.h
 // Author      : TriggerHuang@viatech.com.cn
-// Description : Example Application of COS Project
+// Description : Example Application of NFC Project
 //============================================================================
 
 
